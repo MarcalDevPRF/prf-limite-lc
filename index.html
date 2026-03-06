@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PRF - Limite de Servidores em LC</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;900&display=swap" rel="stylesheet">
+    <style>
+        :root { --prf-azul: #002C5F; --prf-amarelo: #FFD700; --prf-bg: #f4f7f6; --danger: #d32f2f; --success: #2e7d32; }
+        
+        body { font-family: 'Roboto', sans-serif; margin: 0; background-color: var(--prf-bg); color: #333; padding-top: 70px; }
+        
+        /* Cabeçalho Congelado com Sigla à Esquerda */
+        .header { 
+            background-color: var(--prf-azul); 
+            color: white; 
+            height: 55px;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            border-bottom: 3px solid var(--prf-amarelo); 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
+            position: fixed; 
+            top: 0; 
+            width: 100%; 
+            z-index: 1000;
+            box-sizing: border-box;
+        }
+        .header .sigla { 
+            font-size: 32px; 
+            font-weight: 900; 
+            letter-spacing: -1px;
+            color: var(--prf-amarelo);
+        }
+        .header .titulo { 
+            flex-grow: 1;
+            text-align: center;
+            font-size: 16px;
+            text-transform: uppercase;
+            font-weight: 300;
+            letter-spacing: 1px;
+            margin-right: 40px; /* Compensa a largura da sigla para centralizar melhor */
+        }
+
+        .container { max-width: 950px; margin: 0 auto; padding: 0 15px; }
+        
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 20px; }
+        h2 { color: var(--prf-azul); font-size: 13px; margin-top: 0; border-left: 4px solid var(--prf-amarelo); padding-left: 10px; text-transform: uppercase; margin-bottom: 15px; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; align-items: end; }
+        
+        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 11px; color: #555; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 13px; background-color: white; }
+        
+        .dias-badge { background: #e9ecef; border-radius: 5px; padding: 8px; text-align: center; border: 1px solid #dee2e6; height: 38px; display: flex; flex-direction: column; justify-content: center; }
+        .dias-badge span { font-size: 8px; text-transform: uppercase; color: #666; font-weight: bold; }
+        .dias-badge strong { font-size: 14px; color: var(--prf-azul); display: block; }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
+        button { flex: 1; padding: 14px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.2s; font-size: 12px; }
+        .btn-analisar { background: var(--prf-azul); color: white; }
+        .btn-pdf { background: #6c757d; color: white; }
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .resumo-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .info-box { background: #f8f9fa; padding: 8px; border-radius: 4px; border-bottom: 2px solid #ddd; }
+        .info-box small { font-size: 9px; color: #777; text-transform: uppercase; display: block; margin-bottom: 2px; }
+        .info-box div { font-weight: bold; color: var(--prf-azul); font-size: 12px; }
+
+        .status-header { padding: 12px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; font-size: 13px; }
+        .status-regular { background: #d4edda; color: var(--success); border: 1px solid #c3e6cb; }
+        .status-violacao { background: #f8d7da; color: var(--danger); border: 1px solid #f5c6cb; }
+
+        table { width: 100%; border-collapse: collapse; background: white; border-radius: 5px; overflow: hidden; }
+        th { background: var(--prf-azul); color: white; padding: 10px; text-align: left; font-size: 11px; }
+        td { padding: 10px; border-bottom: 1px solid #eee; font-size: 13px; }
+        tr.bad { background: #fff5f5; color: var(--danger); font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="sigla">PRF</div>
+    <div class="titulo">Relatório de limite de servidores em LC</div>
+</div>
+
+<div class="container">
+    <div class="card">
+        <h2>1. Identificação do Processo e Servidor</h2>
+        <div class="form-grid">
+            <div>
+                <label>Processo SEI!</label>
+                <input type="text" id="procSei" placeholder="00000.000000/202X-XX">
+            </div>
+            <div>
+                <label>Nome do Servidor</label>
+                <input type="text" id="nomeServidor" placeholder="Nome Completo">
+            </div>
+            <div>
+                <label>Matrícula</label>
+                <input type="text" id="matServidor" placeholder="0000000">
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>2. Parâmetros de Consulta</h2>
+        <div class="form-grid">
+            <div>
+                <label>Data Inicial</label>
+                <input type="date" id="dataInicio" onchange="atualizarContadorDias()">
+            </div>
+            <div>
+                <label>Data Final</label>
+                <input type="date" id="dataFim" onchange="atualizarContadorDias()">
+            </div>
+            <div class="dias-badge">
+                <span>Duração</span>
+                <strong id="labelDias">0 dias</strong>
+            </div>
+        </div>
+        
+        <div class="form-grid" style="margin-top:15px;">
+            <div>
+                <label>Unidade (UPAG)</label>
+                <select id="upagNome">
+                    <option value="DPRF-SEDE">DPRF-SEDE</option>
+                    <option value="DPRF-UNIPRF">DPRF-UNIPRF</option>
+                    <option value="SPRF-AC">SPRF-AC</option>
+                    <option value="SPRF-AL">SPRF-AL</option>
+                    <option value="SPRF-AM">SPRF-AM</option>
+                    <option value="SPRF-AP">SPRF-AP</option>
+                    <option value="SPRF-BA">SPRF-BA</option>
+                    <option value="SPRF-CE">SPRF-CE</option>
+                    <option value="SPRF-DF">SPRF-DF</option>
+                    <option value="SPRF-ES">SPRF-ES</option>
+                    <option value="SPRF-GO">SPRF-GO</option>
+                    <option value="SPRF-MA">SPRF-MA</option>
+                    <option value="SPRF-MG">SPRF-MG</option>
+                    <option value="SPRF-MS">SPRF-MS</option>
+                    <option value="SPRF-MT">SPRF-MT</option>
+                    <option value="SPRF-PA">SPRF-PA</option>
+                    <option value="SPRF-PB">SPRF-PB</option>
+                    <option value="SPRF-PE">SPRF-PE</option>
+                    <option value="SPRF-PI">SPRF-PI</option>
+                    <option value="SPRF-PR">SPRF-PR</option>
+                    <option value="SPRF-RJ">SPRF-RJ</option>
+                    <option value="SPRF-RN">SPRF-RN</option>
+                    <option value="SPRF-RO">SPRF-RO</option>
+                    <option value="SPRF-RR">SPRF-RR</option>
+                    <option value="SPRF-RS">SPRF-RS</option>
+                    <option value="SPRF-SC">SPRF-SC</option>
+                    <option value="SPRF-SE">SPRF-SE</option>
+                    <option value="SPRF-SP">SPRF-SP</option>
+                    <option value="SPRF-TO">SPRF-TO</option>
+                </select>
+            </div>
+            <div>
+                <label>Efetivo Atual da Unidade</label>
+                <input type="number" id="efetivo" placeholder="Informe o número">
+            </div>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-analisar" onclick="processar()">🔍 Analisar Viabilidade</button>
+            <button class="btn-pdf" onclick="exportarPDF()">📄 Exportar Relatório PDF</button>
+        </div>
+    </div>
+
+    <div id="resultadoArea" class="card" style="display:none;">
+        <h2>3. Resultado da Análise</h2>
+        <div id="statusViolacao" class="status-header"></div>
+        <div class="resumo-info" id="resumoCampos"></div>
+        <div id="tabelaArea"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQmltrPREjzs3YupFzH0wcuh55QVW_x2zPO29WenB8FOUdvzz11M3pkxuMbWqqtvAa4WHXTXa0vDyBj/pub?gid=0&single=true&output=csv";
+let dadosParaPDF = [];
+
+function atualizarContadorDias() {
+    const d1 = document.getElementById("dataInicio").value;
+    const d2 = document.getElementById("dataFim").value;
+    if (d1 && d2) {
+        const diff = (new Date(d2 + "T00:00:00") - new Date(d1 + "T00:00:00")) / (1000 * 3600 * 24) + 1;
+        document.getElementById("labelDias").innerText = (diff > 0 ? Math.floor(diff) : 0) + " dias";
+    }
+}
+
+function parseDataPlanilha(str) {
+    if (!str || str.trim() === "") return null;
+    const partes = str.trim().split('/');
+    return new Date(parseInt(partes[2]), parseInt(partes[1]) - 1, parseInt(partes[0]), 0, 0, 0);
+}
+
+async function processar() {
+    const upagAlvo = document.getElementById("upagNome").value;
+    const efetivoTotal = parseInt(document.getElementById("efetivo").value);
+    const dIniStr = document.getElementById("dataInicio").value;
+    const dFimStr = document.getElementById("dataFim").value;
+
+    if (!dIniStr || !dFimStr || !efetivoTotal) return alert("Por favor, preencha o Efetivo e o Período.");
+
+    document.getElementById("resultadoArea").style.display = "block";
+    const tabelaArea = document.getElementById("tabelaArea");
+    tabelaArea.innerHTML = "Consultando base de dados...";
+
+    try {
+        const response = await fetch(CSV_URL + "&cache=" + Date.now());
+        const texto = await response.text();
+        const linhas = texto.trim().split("\n").slice(1); 
+
+        const licencas = linhas.map(linha => {
+            const col = linha.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            return {
+                upag: col[0]?.replace(/"/g, '').trim().toUpperCase(),
+                inicio: parseDataPlanilha(col[2]?.replace(/"/g, '')),
+                fim: parseDataPlanilha(col[3]?.replace(/"/g, ''))
+            };
+        }).filter(l => l.upag === upagAlvo && l.inicio && l.fim);
+
+        let dataCursor = new Date(dIniStr + "T00:00:00");
+        const dataFinal = new Date(dFimStr + "T00:00:00");
+        let conflitos = [];
+
+        while (dataCursor <= dataFinal) {
+            let count = 0;
+            licencas.forEach(l => {
+                if (dataCursor >= l.inicio && dataCursor <= l.fim) count++;
+            });
+            const pct = (count / efetivoTotal) * 100;
+            if (pct > 5) {
+                conflitos.push({ data: dataCursor.toLocaleDateString('pt-BR'), qtd: count, pct: pct.toFixed(2) + "%" });
+            }
+            dataCursor.setDate(dataCursor.getDate() + 1);
+        }
+
+        const resumoHTML = `
+            <div class="info-box"><small>Unidade</small><div>${upagAlvo}</div></div>
+            <div class="info-box"><small>Servidor</small><div>${document.getElementById("nomeServidor").value || 'Não informado'}</div></div>
+            <div class="info-box"><small>Matrícula</small><div>${document.getElementById("matServidor").value || '-'}</div></div>
+            <div class="info-box"><small>Efetivo Base</small><div>${efetivoTotal}</div></div>
+        `;
+        document.getElementById("resumoCampos").innerHTML = resumoHTML;
+
+        const statusBox = document.getElementById("statusViolacao");
+        if (conflitos.length === 0) {
+            statusBox.className = "status-header status-regular";
+            statusBox.innerText = "✅ Operação Regular: Limite de 5% Respeitado";
+            tabelaArea.innerHTML = "<p style='text-align:center; color:#666; font-size:13px;'>Nenhum conflito encontrado para o período solicitado.</p>";
+        } else {
+            statusBox.className = "status-header status-violacao";
+            statusBox.innerText = "⚠️ Violação Detectada: Limite de 5% Excedido";
+            let html = `<table><tr><th>Data</th><th>Licenças Ativas</th><th>% Impacto</th></tr>`;
+            conflitos.forEach(c => html += `<tr class="bad"><td>${c.data}</td><td>${c.qtd}</td><td>${c.pct}</td></tr>`);
+            tabelaArea.innerHTML = html + "</table>";
+        }
+        dadosParaPDF = conflitos;
+
+    } catch (e) {
+        alert("Erro na conexão com a planilha.");
+    }
+}
+
+function exportarPDF() {
+    if (document.getElementById("statusViolacao").innerText === "") return alert("Realize a análise primeiro.");
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFillColor(0, 44, 95);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(16);
+    doc.text("RELATÓRIO TÉCNICO DE VIABILIDADE", 105, 15, { align: "center" });
+    doc.setFontSize(10);
+    doc.text("Polícia Rodoviária Federal - Licença Capacitação", 105, 22, { align: "center" });
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text("DADOS DO PROCESSO E SERVIDOR", 14, 40);
+    doc.setFont("helvetica", "normal");
+    doc.text("Processo SEI!: " + (document.getElementById("procSei").value || "N/A"), 14, 48);
+    doc.text("Servidor: " + (document.getElementById("nomeServidor").value || "N/A"), 14, 54);
+    doc.text("Matrícula: " + (document.getElementById("matServidor").value || "N/A"), 14, 60);
+    doc.text("Unidade: " + document.getElementById("upagNome").value, 14, 66);
+    doc.text("Efetivo da Unidade: " + document.getElementById("efetivo").value, 14, 72);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("PERÍODO ANALISADO", 14, 82);
+    doc.setFont("helvetica", "normal");
+    doc.text(document.getElementById("dataInicio").value + " até " + document.getElementById("dataFim").value, 14, 90);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("VEREDITO:", 14, 100);
+    doc.text(document.getElementById("statusViolacao").innerText, 40, 100);
+
+    if (dadosParaPDF.length > 0) {
+        doc.autoTable({
+            startY: 110,
+            head: [['Data', 'Licenças Ativas', '% de Ocupação']],
+            body: dadosParaPDF.map(d => [d.data, d.qtd, d.pct]),
+            headStyles: { fillColor: [0, 44, 95] }
+        });
+    } else {
+        doc.text("Não foram detectados impedimentos técnicos quanto ao limite de 5% no período.", 14, 115);
+    }
+
+    doc.save("Relatorio_Viabilidade_" + document.getElementById("upagNome").value + ".pdf");
+}
+</script>
+</body>
+</html>
