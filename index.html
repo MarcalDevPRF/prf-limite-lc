@@ -18,7 +18,7 @@
             display: flex;
             align-items: center;
             padding: 0 30px;
-            border-bottom: 3px solid var(--prf-amarelo); 
+            border-bottom: 3px solid var(--prf-bg); 
             box-shadow: 0 2px 10px rgba(0,0,0,0.2); 
             position: fixed; 
             top: 0; 
@@ -162,7 +162,7 @@
         </div>
 
         <div class="btn-group">
-            <button class="btn-analisar" onclick="processar()">🔍 Analisar Viabilidade</button>
+            <button class="btn-analisar" onclick="processar()"> Analisar Viabilidade</button>
             <button class="btn-pdf" onclick="exportarPDF()">📄 Exportar Relatório PDF</button>
         </div>
     </div>
@@ -250,11 +250,11 @@ async function processar() {
         const statusBox = document.getElementById("statusViolacao");
         if (conflitos.length === 0) {
             statusBox.className = "status-header status-regular";
-            statusBox.innerText = "✅ Operação Regular: Limite de 5% Respeitado";
+            statusBox.innerText = "Operação Regular: Limite de 5% Respeitado";
             tabelaArea.innerHTML = "<p style='text-align:center; color:#666; font-size:13px;'>Nenhum conflito encontrado para o período solicitado.</p>";
         } else {
             statusBox.className = "status-header status-violacao";
-            statusBox.innerText = "⚠️ Violação Detectada: Limite de 5% Excedido";
+            statusBox.innerText = "Violação Detectada: Limite de 5% Excedido";
             let html = `<table><tr><th>Data</th><th>Licenças Ativas</th><th>% Impacto</th></tr>`;
             conflitos.forEach(c => html += `<tr class="bad"><td>${c.data}</td><td>${c.qtd}</td><td>${c.pct}</td></tr>`);
             tabelaArea.innerHTML = html + "</table>";
